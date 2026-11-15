@@ -108,6 +108,20 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transfor
 .sum td.n { font-family: var(--f-num); }
 .sum .pen { color: var(--danger); font-weight: 700; }
 .table-wrap { overflow-x: auto; }
+.card .score { font-family: var(--f-num); font-weight: 700; font-size: clamp(17px, 3.2vh, 28px); }
+.sheet.flip { align-items: start; }
+.sheet.flip > div { transform: rotate(180deg); }
+.pad-num { font-family: var(--f-num); font-size: 52px; font-weight: 700; text-align: center; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.pad-num.empty { color: var(--muted); }
+.keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.keys button { min-height: 58px; font-size: 24px; font-weight: 600; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.keys .ok { background: var(--ink); color: var(--bg); border-color: var(--ink); font-size: 18px; }
+.sheet h3 { margin: 4px 0 0; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.rack { display: grid; gap: 8px; }
+.rack input { max-width: 6.5rem; text-align: right; font-family: var(--f-num); }
+.rack .name-row span.nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.winner { font-family: var(--f-display); font-weight: 800; font-size: 22px; margin: 0; text-wrap: balance; }
+.sum .tot { font-weight: 700; }
 </style>
 
 <main id="setup">
@@ -116,7 +130,7 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transfor
       <span class="tile">C<sub>1</sub></span><span class="tile">E<sub>1</sub></span><span class="tile">A<sub>1</sub></span><span class="tile">S<sub>1</sub></span>
     </div>
     <h1 style="font-family:var(--f-display);font-size:30px;margin:14px 0 0;text-wrap:balance">Ceas de Scrabble</h1>
-    <p class="lead">Pune telefonul pe masă. Cine termină tura atinge ecranul și ceasul trece la următorul jucător.</p>
+    <p class="lead">Pune telefonul pe masă. Cine termină tura atinge ecranul, își trece punctele, iar ceasul trece la următorul jucător. Aplicația ține scorul.</p>
   </header>
 
   <fieldset>
@@ -163,12 +177,29 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transfor
 
 <div class="sheet" id="endSheet" hidden><div>
   <h2>Rezumatul jocului</h2>
+  <p class="winner" id="winner"></p>
   <div class="table-wrap"><table class="sum" id="sumTable"></table></div>
   <p class="hint" id="sumHint"></p>
+  <h3>Literele rămase pe suport</h3>
+  <p class="hint">Scrie suma punctelor de pe literele rămase. Se scad de la fiecare. Cine a terminat literele (0) primește suma celorlalți.</p>
+  <div class="rack" id="rack"></div>
   <div class="actions">
     <button type="button" class="secondary" id="backGame">Înapoi la joc</button>
     <button type="button" class="primary" id="newGame">Joc nou</button>
   </div>
+</div></div>
+
+<div class="sheet" id="pad" hidden><div>
+  <h2 id="padTitle">Câte puncte?</h2>
+  <div class="pad-num empty" id="padNum" aria-live="polite">0</div>
+  <div class="keys" id="keys">
+    <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
+    <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
+    <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
+    <button type="button" data-k="del" aria-label="Șterge">⌫</button><button type="button" data-k="0">0</button><button type="button" data-k="ok" class="ok">Gata</button>
+  </div>
+  <button type="button" class="secondary" id="padPass">Pas sau schimb de litere (0 puncte)</button>
+  <p class="hint">Ceasul merge deja pentru următorul jucător.</p>
 </div></div>
 
 <script>
@@ -228,18 +259,27 @@ $('#minus').addEventListener('click', () => step(-1));
 $('#plus').addEventListener('click', () => step(1));
 ['Pen', 'Flip', 'Sound'].forEach(k => $('#opt' + k).addEventListener('change', e => { S[k.toLowerCase()] = e.target.checked; save(); }));
 $('#start').addEventListener('click', () => { unlockAudio(); newGame(); });
-$('#resume').addEventListener('click', () => { unlockAudio(); const g = store.get('scr-game'); if (g) { G = g; G.running = false; S = Object.assign({}, S, G.cfg); showGame(); } });
+$('#resume').addEventListener('click', () => { unlockAudio(); const g = store.get('scr-game'); if (g) { G = fixGame(g); S = Object.assign({}, S, G.cfg); showGame(); } });
+function fixGame(g) {
+  g.running = false;
+  if (!g.score) g.score = Array(g.cfg.n).fill(0);
+  if (!g.rack) g.rack = Array(g.cfg.n).fill('');
+  if (g.pending === undefined) g.pending = null;
+  return g;
+}
 
 /* ---------------- Game ---------------- */
 function newGame() {
   G = { cfg: { n: S.n, names: S.names.slice(), mode: S.mode, totalMin: S.totalMin, turnSec: S.turnSec, pen: S.pen, flip: S.flip, sound: S.sound },
         used: Array(S.n).fill(0), turns: Array(S.n).fill(0), turnUsed: 0, active: 0, running: false, started: false,
-        beeped: Array(S.n).fill(false), warned: false, hist: [] };
+        beeped: Array(S.n).fill(false), warned: false, hist: [],
+        score: Array(S.n).fill(0), rack: Array(S.n).fill(''), pending: null };
   showGame();
 }
 function showGame() {
   $('#setup').hidden = true; $('#game').hidden = false;
   buildCards(); render();
+  if (G.pending !== null) openPad(G.pending);
 }
 function buildCards() {
   const c = G.cfg, wrap = $('#cards'); wrap.innerHTML = '';
@@ -281,9 +321,9 @@ function render() {
     el.classList.toggle('idle-paused', !G.running);
     el.querySelector('.time').textContent = fmt(rem);
     const pen = penalty(i);
-    let meta = `Ture: ${G.turns[i]}`;
+    let meta = `<span class="score">${G.score[i]} pct</span> · ture: ${G.turns[i]}`;
     if (c.mode === 'turn') meta += ` · total ${fmtUsed(G.used[i])}`;
-    el.querySelector('.meta').innerHTML = meta.replace(/&/g, '&amp;') + (pen ? ` <span class="chip pen">−${pen} pct</span>` : '');
+    el.querySelector('.meta').innerHTML = meta + (pen ? ` <span class="chip pen">−${pen} pct</span>` : '');
     el.querySelector('.tap').textContent = act ? (G.running ? 'Atinge când termini tura' : (G.started ? 'Pauză · atinge pentru a continua' : 'Atinge pentru a începe')) : '';
     el.setAttribute('aria-label', `${el.querySelector('.nm').textContent}, ${fmt(rem)}${act ? ', la rând' : ''}`);
   }
@@ -305,21 +345,52 @@ function pause() { tick(); G.running = false; keepAwake(false); persist(); rende
 function togglePause() { unlockAudio(); G.running ? pause() : start(); }
 function nextTurn() {
   tick();
-  G.hist.push({ from: G.active, turnUsed: G.turnUsed, warned: G.warned });
+  const from = G.active;
+  G.hist.push({ from, turnUsed: G.turnUsed, warned: G.warned, pts: 0 });
   if (G.hist.length > 50) G.hist.shift();
   G.turns[G.active]++;
+  G.pending = from;
   G.active = (G.active + 1) % G.cfg.n;
   G.turnUsed = 0; G.warned = false;
   if (G.cfg.mode === 'turn') G.beeped[G.active] = false;
   try { navigator.vibrate && navigator.vibrate(30); } catch {}
   persist(); render();
+  openPad(from);
 }
+
+/* ---------------- Score pad ---------------- */
+let padVal = '';
+function openPad(i) {
+  padVal = '';
+  const c = G.cfg;
+  $('#padTitle').textContent = 'Câte puncte a făcut ' + ((c.names[i] || '').trim() || 'Jucător ' + (i + 1)) + '?';
+  $('#pad').classList.toggle('flip', c.n === 2 && c.flip && i === 1);
+  $('#pad > div').style.boxShadow = `inset 0 6px 0 var(--p${i + 1})`;
+  showPad(); $('#pad').hidden = false;
+}
+function showPad() { const el = $('#padNum'); el.textContent = padVal || '0'; el.classList.toggle('empty', !padVal); }
+function padKey(k) {
+  if (k === 'ok') return commitPad(+padVal || 0);
+  if (k === 'del') padVal = padVal.slice(0, -1);
+  else if (padVal.length < 3) padVal = (padVal + k).replace(/^0+(?=\d)/, '');
+  showPad();
+}
+function commitPad(p) {
+  const i = G.pending; if (i === null) return;
+  const h = G.hist[G.hist.length - 1];
+  if (h && h.from === i) h.pts = p;
+  G.score[i] += p; G.pending = null;
+  $('#pad').hidden = true; persist(); render();
+}
+$('#keys').addEventListener('click', e => { const b = e.target.closest('button'); if (b) padKey(b.dataset.k); });
+$('#padPass').addEventListener('click', () => commitPad(0));
 function undo() {
   const h = G.hist.pop(); if (!h) return;
   tick();
   // the time since the mistaken tap belongs to the previous player
   G.used[G.active] -= G.turnUsed; G.used[h.from] += G.turnUsed;
   G.turnUsed = h.turnUsed + G.turnUsed; G.active = h.from; G.turns[h.from]--; G.warned = h.warned;
+  G.score[h.from] -= h.pts || 0;
   persist(); render();
 }
 function tick() {
@@ -339,18 +410,40 @@ function persist() { if (!G) return; lastSave = Date.now(); store.set('scr-game'
 setInterval(() => { if (G && G.running && Date.now() - lastSave > 3000) persist(); }, 1000);
 
 /* ---------------- End ---------------- */
-function openEnd() {
-  if (G.running) pause();
-  const c = G.cfg;
-  let h = `<tr><th>Jucător</th><th>Timp folosit</th><th>Ture</th><th>Medie / tură</th>${c.mode === 'total' && c.pen ? '<th>Penalizare</th>' : ''}</tr>`;
+const esc = s => s.replace(/[<&]/g, m => m === '<' ? '&lt;' : '&amp;');
+const nameOf = i => (G.cfg.names[i] || '').trim() || 'Jucător ' + (i + 1);
+function finals() {
+  const n = G.cfg.n, left = G.rack.map(v => Math.max(0, parseInt(v, 10) || 0));
+  const typed = G.rack.filter(v => String(v).trim() !== '').length;
+  const outs = [];
+  for (let i = 0; i < n; i++) if (String(G.rack[i]).trim() !== '' && left[i] === 0) outs.push(i);
+  const bonus = outs.length === 1 && typed === n ? left.reduce((a, b) => a + b, 0) : 0;
+  return { left, list: G.score.map((s, i) => s - penalty(i) - left[i] + (outs.length === 1 && i === outs[0] ? bonus : 0)) };
+}
+function renderSum() {
+  const c = G.cfg, showPen = c.mode === 'total' && c.pen, f = finals();
+  let h = `<tr><th>Jucător</th><th>Puncte</th><th>Timp</th>${showPen ? '<th>Penal.</th>' : ''}<th>Final</th></tr>`;
   for (let i = 0; i < c.n; i++) {
-    const t = G.turns[i] + (i === G.active && G.turnUsed > 0 ? 1 : 0);
-    const avg = t ? fmtUsed(G.used[i] / t) : '–';
-    const nm = ((c.names[i] || '').trim() || 'Jucător ' + (i + 1)).replace(/[<&]/g, m => m === '<' ? '&lt;' : '&amp;');
-    h += `<tr><td><span class="dot" style="display:inline-block;width:10px;height:10px;margin-right:6px;background:var(--p${i + 1})"></span>${nm}</td><td class="n">${fmtUsed(G.used[i])}</td><td class="n">${t}</td><td class="n">${avg}</td>${c.mode === 'total' && c.pen ? `<td class="n ${penalty(i) ? 'pen' : ''}">${penalty(i) ? '−' + penalty(i) : '0'}</td>` : ''}</tr>`;
+    h += `<tr><td><span class="dot" style="display:inline-block;width:10px;height:10px;margin-right:6px;background:var(--p${i + 1})"></span>${esc(nameOf(i))}</td><td class="n">${G.score[i]}</td><td class="n">${fmtUsed(G.used[i])}</td>${showPen ? `<td class="n ${penalty(i) ? 'pen' : ''}">${penalty(i) ? '−' + penalty(i) : '0'}</td>` : ''}<td class="n tot">${f.list[i]}</td></tr>`;
   }
   $('#sumTable').innerHTML = h;
-  $('#sumHint').textContent = c.mode === 'total' && c.pen ? 'Penalizările se scad din scorul final al fiecărui jucător.' : 'Ceasul e pe pauză.';
+  const best = Math.max(...f.list), win = f.list.map((v, i) => v === best ? i : -1).filter(i => i >= 0);
+  $('#winner').textContent = G.score.every(s => s === 0) ? 'Încă nu s-au trecut puncte.' :
+    win.length === 1 ? `Câștigă ${nameOf(win[0])}, cu ${best} de puncte!` : `Egalitate între ${win.map(nameOf).join(' și ')}: ${best} de puncte.`;
+  $('#sumHint').textContent = showPen ? 'Finalul include penalizările de timp și literele rămase.' : 'Finalul include literele rămase. Ceasul e pe pauză.';
+}
+function openEnd() {
+  if (G.running) pause();
+  const c = G.cfg, box = $('#rack'); box.innerHTML = '';
+  for (let i = 0; i < c.n; i++) {
+    const row = document.createElement('label'); row.className = 'name-row';
+    row.innerHTML = `<span class="dot" style="background:var(--p${i + 1})"></span><span class="nm"></span><input id="rack${i}" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="0">`;
+    row.querySelector('.nm').textContent = nameOf(i);
+    const inp = row.querySelector('input'); inp.value = G.rack[i] || '';
+    inp.addEventListener('input', () => { inp.value = inp.value.replace(/\D/g, ''); G.rack[i] = inp.value; persist(); renderSum(); });
+    box.appendChild(row);
+  }
+  renderSum();
   $('#endSheet').hidden = false;
 }
 $('#backGame').addEventListener('click', () => { $('#endSheet').hidden = true; });
@@ -385,6 +478,12 @@ document.addEventListener('visibilitychange', () => {
 });
 document.addEventListener('keydown', e => {
   if (!G || $('#game').hidden || !$('#endSheet').hidden) return;
+  if (!$('#pad').hidden) {
+    if (/^\d$/.test(e.key)) padKey(e.key);
+    else if (e.key === 'Backspace') padKey('del');
+    else if (e.key === 'Enter') { e.preventDefault(); padKey('ok'); }
+    return;
+  }
   if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); G.running ? nextTurn() : start(); }
   if (e.key === 'p') togglePause();
 });
@@ -394,7 +493,7 @@ window.claude?.hot?.snapshot?.(() => ({ S, G: G ? (tick(), G) : null }));
 function boot(data) {
   if (data && data.S) S = Object.assign({}, DEF, data.S);
   renderSetup();
-  if (data && data.G) { G = data.G; G.running = false; showGame(); }
+  if (data && data.G) { G = fixGame(data.G); showGame(); }
 }
 window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
 })();
