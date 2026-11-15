@@ -122,6 +122,32 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transfor
 .rack .name-row span.nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .winner { font-family: var(--f-display); font-weight: 800; font-size: 22px; margin: 0; text-wrap: balance; }
 .sum .tot { font-weight: 700; }
+.bingo { border: 2px dashed var(--line); border-radius: 12px; padding: 12px; background: transparent; font-weight: 700; min-height: 52px; }
+.bingo[aria-pressed="true"] { border-style: solid; border-color: var(--tile-edge); background: var(--tile); color: var(--tile-ink); }
+.linkish { border: 0; background: none; color: var(--muted); text-decoration: underline; padding: 8px; font-size: 14px; }
+#stats { max-width: 34rem; margin: 0 auto; padding-block: 20px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 18px; }
+#stats h1 { font-family: var(--f-display); font-size: 28px; margin: 0; }
+#stats h2 { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 6px 0 0; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rec { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 8px; }
+.rec div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 2px; min-width: 0; }
+.rec b { font-family: var(--f-num); font-size: 26px; font-variant-numeric: tabular-nums; }
+.rec span { font-size: 13px; color: var(--muted); }
+.rec i { font-style: normal; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; }
+.pl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.pl-head strong { font-family: var(--f-display); font-size: 20px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-head .w { font-family: var(--f-num); font-weight: 700; white-space: nowrap; }
+.pl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 8px; }
+.pl-grid div { display: grid; gap: 1px; min-width: 0; }
+.pl-grid b { font-family: var(--f-num); font-size: 18px; font-variant-numeric: tabular-nums; }
+.pl-grid span { font-size: 12px; color: var(--muted); line-height: 1.25; }
+.rank { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 5px; background: var(--tile); color: var(--tile-ink); box-shadow: inset 0 -2px 0 var(--tile-edge); font-weight: 800; font-size: 14px; margin-right: 8px; vertical-align: 3px; }
+.games { display: grid; gap: 6px; }
+.games div { display: flex; gap: 10px; font-size: 14px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.games time { color: var(--muted); flex: none; width: 4.5rem; font-variant-numeric: tabular-nums; }
+.games span { min-width: 0; }
+.empty-state { background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; padding: 20px; color: var(--muted); line-height: 1.5; }
 </style>
 
 <main id="setup">
@@ -168,8 +194,17 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transfor
   <div class="actions">
     <button type="button" class="secondary" id="resume" hidden>Continuă jocul întrerupt</button>
     <button type="button" class="primary" id="start">Începe jocul</button>
+    <button type="button" class="secondary" id="statsBtn">Clasament și recorduri</button>
   </div>
 </main>
+
+<section id="stats" hidden>
+  <div class="topbar">
+    <h1>Clasament</h1>
+    <button type="button" class="secondary" id="statsBack" style="min-height:44px;padding:8px 16px">Înapoi</button>
+  </div>
+  <div id="statsBody" style="display:grid;gap:18px"></div>
+</section>
 
 <section id="game" hidden>
   <div id="cards" style="display:contents"></div>
@@ -185,7 +220,8 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transfor
   <div class="rack" id="rack"></div>
   <div class="actions">
     <button type="button" class="secondary" id="backGame">Înapoi la joc</button>
-    <button type="button" class="primary" id="newGame">Joc nou</button>
+    <button type="button" class="primary" id="newGame">Salvează în clasament și joc nou</button>
+    <button type="button" class="linkish" id="discardGame">Joc nou fără salvare</button>
   </div>
 </div></div>
 
@@ -198,6 +234,7 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transfor
     <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
     <button type="button" data-k="del" aria-label="Șterge">⌫</button><button type="button" data-k="0">0</button><button type="button" data-k="ok" class="ok">Gata</button>
   </div>
+  <button type="button" class="bingo" id="padBingo" aria-pressed="false">Scrabble! A pus toate cele 7 litere (+50)</button>
   <button type="button" class="secondary" id="padPass">Pas sau schimb de litere (0 puncte)</button>
   <p class="hint">Ceasul merge deja pentru următorul jucător.</p>
 </div></div>
@@ -264,6 +301,7 @@ function fixGame(g) {
   g.running = false;
   if (!g.score) g.score = Array(g.cfg.n).fill(0);
   if (!g.rack) g.rack = Array(g.cfg.n).fill('');
+  if (!g.moves) g.moves = [];
   if (g.pending === undefined) g.pending = null;
   return g;
 }
@@ -273,7 +311,7 @@ function newGame() {
   G = { cfg: { n: S.n, names: S.names.slice(), mode: S.mode, totalMin: S.totalMin, turnSec: S.turnSec, pen: S.pen, flip: S.flip, sound: S.sound },
         used: Array(S.n).fill(0), turns: Array(S.n).fill(0), turnUsed: 0, active: 0, running: false, started: false,
         beeped: Array(S.n).fill(false), warned: false, hist: [],
-        score: Array(S.n).fill(0), rack: Array(S.n).fill(''), pending: null };
+        score: Array(S.n).fill(0), rack: Array(S.n).fill(''), pending: null, moves: [], date: Date.now() };
   showGame();
 }
 function showGame() {
@@ -359,31 +397,38 @@ function nextTurn() {
 }
 
 /* ---------------- Score pad ---------------- */
-let padVal = '';
+let padVal = '', padBingo = false;
 function openPad(i) {
-  padVal = '';
+  padVal = ''; padBingo = false;
   const c = G.cfg;
   $('#padTitle').textContent = 'Câte puncte a făcut ' + ((c.names[i] || '').trim() || 'Jucător ' + (i + 1)) + '?';
-  $('#pad').classList.toggle('flip', c.n === 2 && c.flip && i === 1);
   $('#pad > div').style.boxShadow = `inset 0 6px 0 var(--p${i + 1})`;
   showPad(); $('#pad').hidden = false;
 }
-function showPad() { const el = $('#padNum'); el.textContent = padVal || '0'; el.classList.toggle('empty', !padVal); }
+function showPad() {
+  const el = $('#padNum');
+  el.textContent = (padVal || '0') + (padBingo ? ' + 50 = ' + ((+padVal || 0) + 50) : '');
+  el.classList.toggle('empty', !padVal && !padBingo);
+  $('#padBingo').setAttribute('aria-pressed', padBingo);
+}
+$('#padBingo').addEventListener('click', () => { padBingo = !padBingo; showPad(); });
 function padKey(k) {
   if (k === 'ok') return commitPad(+padVal || 0);
   if (k === 'del') padVal = padVal.slice(0, -1);
   else if (padVal.length < 3) padVal = (padVal + k).replace(/^0+(?=\d)/, '');
   showPad();
 }
-function commitPad(p) {
+function commitPad(p, noBingo) {
   const i = G.pending; if (i === null) return;
+  const b = padBingo && !noBingo; if (b) p += 50;
   const h = G.hist[G.hist.length - 1];
-  if (h && h.from === i) h.pts = p;
+  if (h && h.from === i) { h.pts = p; h.scored = true; }
+  G.moves.push({ p: i, pts: p, b });
   G.score[i] += p; G.pending = null;
   $('#pad').hidden = true; persist(); render();
 }
 $('#keys').addEventListener('click', e => { const b = e.target.closest('button'); if (b) padKey(b.dataset.k); });
-$('#padPass').addEventListener('click', () => commitPad(0));
+$('#padPass').addEventListener('click', () => commitPad(0, true));
 function undo() {
   const h = G.hist.pop(); if (!h) return;
   tick();
@@ -391,6 +436,7 @@ function undo() {
   G.used[G.active] -= G.turnUsed; G.used[h.from] += G.turnUsed;
   G.turnUsed = h.turnUsed + G.turnUsed; G.active = h.from; G.turns[h.from]--; G.warned = h.warned;
   G.score[h.from] -= h.pts || 0;
+  if (h.scored && G.moves.length) G.moves.pop();
   persist(); render();
 }
 function tick() {
@@ -447,10 +493,80 @@ function openEnd() {
   $('#endSheet').hidden = false;
 }
 $('#backGame').addEventListener('click', () => { $('#endSheet').hidden = true; });
-$('#newGame').addEventListener('click', () => {
+function leaveGame() {
   $('#endSheet').hidden = true; G = null; store.del('scr-game'); keepAwake(false);
   $('#game').hidden = true; $('#setup').hidden = false; renderSetup(); window.scrollTo(0, 0);
-});
+}
+$('#newGame').addEventListener('click', () => { saveRecord(); leaveGame(); });
+$('#discardGame').addEventListener('click', leaveGame);
+
+/* ---------------- Clasament ---------------- */
+const keyOf = n => n.trim().toLocaleLowerCase('ro');
+function saveRecord() {
+  if (!G || G.score.every(s => s === 0)) return;
+  const f = finals(), best = Math.max(...f.list);
+  const players = G.score.map((s, i) => {
+    const mv = G.moves.filter(m => m.p === i);
+    return { name: nameOf(i), score: s, final: f.list[i], ms: G.used[i], turns: G.turns[i],
+             best: mv.reduce((a, m) => Math.max(a, m.pts), 0), bingos: mv.filter(m => m.b).length, win: f.list[i] === best };
+  });
+  const hist = store.get('scr-history') || [];
+  hist.push({ date: G.date || Date.now(), players });
+  store.set('scr-history', hist.slice(-500));
+}
+const dfmt = t => new Date(t).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: '2-digit' });
+const num = (v, d = 0) => v.toLocaleString('ro-RO', { minimumFractionDigits: d, maximumFractionDigits: d });
+function renderStats() {
+  const hist = store.get('scr-history') || [], body = $('#statsBody');
+  if (!hist.length) {
+    body.innerHTML = `<div class="empty-state">Încă nu e niciun joc salvat. La sfârșitul unui joc apasă <b>Final</b>, apoi <b>Salvează în clasament</b>. Aici apar victoriile, cel mai valoros cuvânt, scrabble-urile și punctele pe minut ale fiecăruia.<br><br>Scrieți numele la fel de fiecare dată, ca să se adune la aceeași persoană.</div>`;
+    return;
+  }
+  const P = {}, R = { word: null, game: null, bingo: null, ppm: null };
+  const better = (cur, v) => !cur || v > cur.v;
+  for (const g of hist) for (const p of g.players) {
+    const k = keyOf(p.name), o = P[k] || (P[k] = { name: p.name, games: 0, wins: 0, sumFinal: 0, top: 0, best: 0, bingos: 0, score: 0, ms: 0 });
+    o.name = p.name; o.games++; o.wins += p.win ? 1 : 0; o.sumFinal += p.final; o.top = Math.max(o.top, p.final);
+    o.best = Math.max(o.best, p.best); o.bingos += p.bingos; o.score += p.score; o.ms += p.ms;
+    if (better(R.word, p.best)) R.word = { v: p.best, who: p.name, d: g.date };
+    if (better(R.game, p.final)) R.game = { v: p.final, who: p.name, d: g.date };
+    if (p.bingos && better(R.bingo, p.bingos)) R.bingo = { v: p.bingos, who: p.name, d: g.date };
+    const ppm = p.ms >= 60000 ? p.score / (p.ms / 60000) : 0;
+    if (ppm && better(R.ppm, ppm)) R.ppm = { v: ppm, who: p.name, d: g.date };
+  }
+  const list = Object.values(P).sort((a, b) => b.wins - a.wins || (b.wins / b.games) - (a.wins / a.games) || b.sumFinal / b.games - a.sumFinal / a.games);
+  const recCard = (r, label, fmtv) => `<div><span>${label}</span><b>${r ? fmtv(r.v) : '–'}</b><i>${r ? esc(r.who) : '&nbsp;'}</i><span>${r ? dfmt(r.d) : 'încă nimeni'}</span></div>`;
+  let h = `<h2>Recorduri</h2><div class="rec">
+    ${recCard(R.word, 'Cel mai valoros cuvânt', v => v + ' pct')}
+    ${recCard(R.game, 'Cel mai mare scor într-un joc', v => v + ' pct')}
+    ${recCard(R.bingo, 'Cele mai multe scrabble-uri într-un joc', v => v)}
+    ${recCard(R.ppm, 'Cel mai rapid (puncte pe minut)', v => num(v, 1))}
+  </div><h2>Jucători · ${hist.length} ${hist.length === 1 ? 'joc salvat' : 'jocuri salvate'}</h2>`;
+  list.forEach((o, idx) => {
+    const ppm = o.ms >= 60000 ? num(o.score / (o.ms / 60000), 1) : '–';
+    h += `<div class="pl"><div class="pl-head"><strong><span class="rank">${idx + 1}</span>${esc(o.name)}</strong><span class="w">${o.wins} ${o.wins === 1 ? 'victorie' : 'victorii'}</span></div>
+      <div class="pl-grid">
+        <div><b>${o.games}</b><span>jocuri</span></div>
+        <div><b>${num(100 * o.wins / o.games)}%</b><span>câștigate</span></div>
+        <div><b>${num(o.sumFinal / o.games)}</b><span>scor mediu</span></div>
+        <div><b>${o.top}</b><span>cel mai bun joc</span></div>
+        <div><b>${o.best}</b><span>cel mai bun cuvânt</span></div>
+        <div><b>${num(o.bingos / o.games, 1)}</b><span>scrabble-uri pe joc</span></div>
+        <div><b>${ppm}</b><span>puncte pe minut</span></div>
+      </div></div>`;
+  });
+  h += `<h2>Ultimele jocuri</h2><div class="games">` + hist.slice(-10).reverse().map(g =>
+    `<div><time>${dfmt(g.date)}</time><span>${g.players.slice().sort((a, b) => b.final - a.final).map(p => p.win ? `<b>${esc(p.name)} ${p.final}</b>` : `${esc(p.name)} ${p.final}`).join(' · ')}</span></div>`).join('') + `</div>
+    <button type="button" class="linkish" id="clearStats" style="justify-self:start">Șterge tot clasamentul</button>`;
+  body.innerHTML = h;
+  let armed = null;
+  $('#clearStats').addEventListener('click', e => {
+    if (!armed) { e.target.textContent = 'Sigur? Atinge din nou ca să ștergi'; armed = setTimeout(() => { armed = null; e.target.textContent = 'Șterge tot clasamentul'; }, 4000); return; }
+    clearTimeout(armed); store.del('scr-history'); renderStats();
+  });
+}
+$('#statsBtn').addEventListener('click', () => { renderStats(); $('#setup').hidden = true; $('#stats').hidden = false; window.scrollTo(0, 0); });
+$('#statsBack').addEventListener('click', () => { $('#stats').hidden = true; $('#setup').hidden = false; window.scrollTo(0, 0); });
 
 /* ---------------- Sound, wake lock, keys ---------------- */
 function unlockAudio() {
