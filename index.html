@@ -147,7 +147,7 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transfor
   <fieldset>
     <legend>Opțiuni</legend>
     <label class="check" id="penRow"><input type="checkbox" id="optPen"><span>Penalizare la depășire<small>10 puncte pentru fiecare minut început peste timp, ca la concursuri.</small></span></label>
-    <label class="check" id="flipRow"><input type="checkbox" id="optFlip"><span>Ecran față în față<small>Pentru 2 jucători: jumătatea de sus e întoarsă spre cel din fața ta.</small></span></label>
+    <label class="check" id="flipRow"><input type="checkbox" id="optFlip"><span>Ecran față în față<small>Pentru 2 jucători: primul jucător e jos, al doilea sus, cu ecranul întors spre el, ca la ceasul de șah.</small></span></label>
     <label class="check"><input type="checkbox" id="optSound"><span>Sunet când expiră timpul</span></label>
   </fieldset>
 
@@ -247,7 +247,7 @@ function buildCards() {
   const makeCard = i => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'card'; b.id = 'card' + i;
     b.style.setProperty('--pc', `var(--p${i + 1})`); b.style.setProperty('--pci', `var(--p${i + 1}-ink)`); b.style.setProperty('--tsize', tsize);
-    if (c.n === 2 && c.flip && i === 0) b.classList.add('flip');
+    if (c.n === 2 && c.flip && i === 1) b.classList.add('flip');
     b.innerHTML = `<span class="who"><span class="dot" style="background:var(--p${i + 1})"></span><span class="nm"></span></span><span class="time"></span><span class="meta"></span><span class="tap"></span>`;
     b.querySelector('.nm').textContent = (c.names[i] || '').trim() || 'Jucător ' + (i + 1);
     b.addEventListener('click', () => tapCard(i));
@@ -258,7 +258,7 @@ function buildCards() {
   bar.querySelector('#bPause').addEventListener('click', togglePause);
   bar.querySelector('#bUndo').addEventListener('click', undo);
   bar.querySelector('#bEnd').addEventListener('click', openEnd);
-  if (c.n === 2) { wrap.append(makeCard(0), bar, makeCard(1)); }
+  if (c.n === 2) { wrap.append(makeCard(1), bar, makeCard(0)); }
   else { for (let i = 0; i < c.n; i++) wrap.append(makeCard(i)); wrap.append(bar); }
 }
 function remaining(i) {
