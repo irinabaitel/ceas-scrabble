@@ -92,8 +92,8 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transfor
 .card .tap { font-size: 13px; font-weight: 600; opacity: .85; }
 @keyframes blink { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .card.active.over .time { animation: none; text-decoration: underline; } .card { transition: none; } }
-.bar { flex: none; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-.bar button { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; min-height: 52px; font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.bar { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.bar button { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; min-height: 52px; font-weight: 600; font-size: 14px; padding: 4px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .bar button:disabled { opacity: .4; }
 .bar .go { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 
@@ -148,6 +148,33 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transfor
 .games time { color: var(--muted); flex: none; width: 4.5rem; font-variant-numeric: tabular-nums; }
 .games span { min-width: 0; }
 .empty-state { background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; padding: 20px; color: var(--muted); line-height: 1.5; }
+.word-in { padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font-family: var(--f-display); font-weight: 800; font-size: 20px; letter-spacing: .06em; text-transform: uppercase; width: 100%; }
+.word-in::placeholder { text-transform: none; letter-spacing: 0; font-weight: 500; font-family: var(--f-body); font-size: 15px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tags button { border: 1px solid var(--line); background: var(--bg); border-radius: 99px; padding: 8px 12px; font-weight: 600; min-height: 40px; font-size: 14px; }
+.tags button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
+.thumbs button { padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; width: 72px; height: 72px; background: var(--idle); }
+.thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.words { display: grid; gap: 0; }
+.words div { display: grid; grid-template-columns: 2.2rem 1fr auto; gap: 4px 10px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.words .pts { font-family: var(--f-num); font-weight: 700; font-size: 18px; }
+.words .w { font-family: var(--f-display); font-weight: 800; letter-spacing: .05em; min-width: 0; overflow-wrap: anywhere; }
+.words .how { grid-column: 2 / 4; font-size: 13px; color: var(--muted); }
+/* scanner + viewer: deliberately always dark, like a camera screen */
+.scan, .viewer { position: fixed; inset: 0; z-index: 30; background: #0b0b0b; color: #f2f2f2; display: flex; flex-direction: column; gap: 10px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); }
+.viewer { z-index: 40; }
+.scan-msg { text-align: center; font-size: 15px; line-height: 1.35; color: #d8d8d8; margin: 0; }
+.scan-stage { flex: 1; position: relative; min-height: 0; touch-action: none; }
+.scan-stage canvas { position: absolute; }
+.hdl { position: absolute; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; border: 3px solid #ffd54a; background: rgb(255 213 74 / .18); touch-action: none; }
+.hdl::after { content: ""; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: #ffd54a; }
+.scan-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.scan-bar button, .viewer-bar button { min-height: 52px; border-radius: 12px; border: 1px solid #444; background: #1d1d1d; color: #f2f2f2; font-weight: 600; }
+.scan-bar .go { background: #ffd54a; color: #1a1400; border-color: #ffd54a; }
+.viewer img { flex: 1; min-height: 0; width: 100%; object-fit: contain; }
+.viewer-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 </style>
 
 <main id="setup">
@@ -218,6 +245,9 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transfor
   <h3>Literele rămase pe suport</h3>
   <p class="hint">Scrie suma punctelor de pe literele rămase. Se scad de la fiecare. Cine a terminat literele (0) primește suma celorlalți.</p>
   <div class="rack" id="rack"></div>
+  <h3>Poze cu tabla</h3>
+  <div class="thumbs" id="endThumbs"></div>
+  <button type="button" class="secondary" id="addPhoto">📷 Adaugă o poză cu tabla</button>
   <div class="actions">
     <button type="button" class="secondary" id="backGame">Înapoi la joc</button>
     <button type="button" class="primary" id="newGame">Salvează în clasament și joc nou</button>
@@ -228,6 +258,9 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transfor
 <div class="sheet" id="pad" hidden><div>
   <h2 id="padTitle">Câte puncte?</h2>
   <div class="pad-num empty" id="padNum" aria-live="polite">0</div>
+  <input id="padWord" class="word-in" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Cuvântul (opțional), de ex. ZEFLEMEA">
+  <div class="tags" id="padTags"></div>
+  <p class="hint" style="margin-top:-6px">L = literă, C = cuvânt. ×4 și ×9 = dublu sau triplu de două ori. Lipituri = a format mai multe cuvinte deodată.</p>
   <div class="keys" id="keys">
     <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
     <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
@@ -238,6 +271,22 @@ legend { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transfor
   <button type="button" class="secondary" id="padPass">Pas sau schimb de litere (0 puncte)</button>
   <p class="hint">Ceasul merge deja pentru următorul jucător.</p>
 </div></div>
+
+<input type="file" id="photoIn" accept="image/*" hidden>
+<div class="scan" id="scan" hidden>
+  <p class="scan-msg" id="scanMsg">Trage cele 4 cercuri pe colțurile tablei.</p>
+  <div class="scan-stage" id="scanStage">
+    <canvas id="scanCv"></canvas>
+    <div class="hdl" data-i="0"></div><div class="hdl" data-i="1"></div><div class="hdl" data-i="2"></div><div class="hdl" data-i="3"></div>
+  </div>
+  <div class="scan-bar" id="scanBar">
+    <button type="button" id="scanA"></button><button type="button" id="scanB"></button><button type="button" id="scanC" class="go"></button>
+  </div>
+</div>
+<div class="viewer" id="viewer" hidden>
+  <img id="viewImg" alt="Tabla de joc">
+  <div class="viewer-bar"><button type="button" id="viewDel">Șterge poza</button><button type="button" id="viewClose">Închide</button></div>
+</div>
 
 <script>
 (() => {
@@ -302,6 +351,7 @@ function fixGame(g) {
   if (!g.score) g.score = Array(g.cfg.n).fill(0);
   if (!g.rack) g.rack = Array(g.cfg.n).fill('');
   if (!g.moves) g.moves = [];
+  if (!g.id) g.id = 'g' + (g.date || Date.now());
   if (g.pending === undefined) g.pending = null;
   return g;
 }
@@ -311,7 +361,7 @@ function newGame() {
   G = { cfg: { n: S.n, names: S.names.slice(), mode: S.mode, totalMin: S.totalMin, turnSec: S.turnSec, pen: S.pen, flip: S.flip, sound: S.sound },
         used: Array(S.n).fill(0), turns: Array(S.n).fill(0), turnUsed: 0, active: 0, running: false, started: false,
         beeped: Array(S.n).fill(false), warned: false, hist: [],
-        score: Array(S.n).fill(0), rack: Array(S.n).fill(''), pending: null, moves: [], date: Date.now() };
+        score: Array(S.n).fill(0), rack: Array(S.n).fill(''), pending: null, moves: [], date: Date.now(), id: 'g' + Date.now() };
   showGame();
 }
 function showGame() {
@@ -332,7 +382,8 @@ function buildCards() {
     return b;
   };
   const bar = document.createElement('div'); bar.className = 'bar';
-  bar.innerHTML = `<button type="button" id="bPause" class="go"></button><button type="button" id="bUndo">↶ Anulează</button><button type="button" id="bEnd">Final</button>`;
+  bar.innerHTML = `<button type="button" id="bPause" class="go"></button><button type="button" id="bUndo">↶ Anulează</button><button type="button" id="bPhoto">📷 Poză</button><button type="button" id="bEnd">Final</button>`;
+  bar.querySelector('#bPhoto').addEventListener('click', pickPhoto);
   bar.querySelector('#bPause').addEventListener('click', togglePause);
   bar.querySelector('#bUndo').addEventListener('click', undo);
   bar.querySelector('#bEnd').addEventListener('click', openEnd);
@@ -399,7 +450,7 @@ function nextTurn() {
 /* ---------------- Score pad ---------------- */
 let padVal = '', padBingo = false;
 function openPad(i) {
-  padVal = ''; padBingo = false;
+  padVal = ''; padBingo = false; padTagSel = new Set(); $('#padWord').value = ''; buildTags();
   const c = G.cfg;
   $('#padTitle').textContent = 'Câte puncte a făcut ' + ((c.names[i] || '').trim() || 'Jucător ' + (i + 1)) + '?';
   $('#pad > div').style.boxShadow = `inset 0 6px 0 var(--p${i + 1})`;
@@ -412,6 +463,18 @@ function showPad() {
   $('#padBingo').setAttribute('aria-pressed', padBingo);
 }
 $('#padBingo').addEventListener('click', () => { padBingo = !padBingo; showPad(); });
+const TAGS = [['L2', 'L×2', 'literă dublă'], ['L3', 'L×3', 'literă triplă'], ['C2', 'C×2', 'cuvânt dublu'], ['C3', 'C×3', 'cuvânt triplu'],
+              ['C4', 'C×4', 'dublu de două ori'], ['C9', 'C×9', 'triplu de două ori'], ['LIP', 'lipituri', 'mai multe cuvinte deodată']];
+let padTagSel = new Set();
+function buildTags() {
+  $('#padTags').innerHTML = TAGS.map(([k, s]) => `<button type="button" data-t="${k}" aria-pressed="${padTagSel.has(k)}">${s}</button>`).join('');
+}
+$('#padTags').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const k = b.dataset.t; padTagSel.has(k) ? padTagSel.delete(k) : padTagSel.add(k);
+  b.setAttribute('aria-pressed', padTagSel.has(k));
+});
+const howText = (t, b) => [...(b ? ['scrabble +50'] : []), ...(t || []).map(k => (TAGS.find(x => x[0] === k) || [])[2]).filter(Boolean)].join(', ');
 function padKey(k) {
   if (k === 'ok') return commitPad(+padVal || 0);
   if (k === 'del') padVal = padVal.slice(0, -1);
@@ -423,7 +486,9 @@ function commitPad(p, noBingo) {
   const b = padBingo && !noBingo; if (b) p += 50;
   const h = G.hist[G.hist.length - 1];
   if (h && h.from === i) { h.pts = p; h.scored = true; }
-  G.moves.push({ p: i, pts: p, b });
+  const w = noBingo ? '' : $('#padWord').value.trim().toLocaleUpperCase('ro');
+  G.moves.push({ p: i, pts: p, b, w, t: noBingo ? [] : [...padTagSel] });
+  $('#padWord').blur();
   G.score[i] += p; G.pending = null;
   $('#pad').hidden = true; persist(); render();
 }
@@ -490,15 +555,182 @@ function openEnd() {
     box.appendChild(row);
   }
   renderSum();
+  renderThumbs(G.id, $('#endThumbs'));
   $('#endSheet').hidden = false;
 }
+
+/* ---------------- Photos (IndexedDB) ---------------- */
+const idb = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    const r = indexedDB.open('scr-photos', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('photos', { keyPath: 'id' }).createIndex('game', 'gameId');
+    r.onsuccess = () => res(r.result); r.onerror = () => { dbp = null; rej(r.error); };
+  }));
+  const tx = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => {
+    const t = db.transaction('photos', mode), req = fn(t.objectStore('photos'));
+    t.oncomplete = () => res(req ? req.result : undefined); t.onerror = () => rej(t.error); }); };
+  return {
+    put: p => tx('readwrite', s => s.put(p)),
+    byGame: gid => tx('readonly', s => s.index('game').getAll(gid)),
+    del: id => tx('readwrite', s => s.delete(id)),
+    clear: () => tx('readwrite', s => s.clear()),
+    async delGame(gid) { for (const p of await this.byGame(gid)) await this.del(p.id); }
+  };
+})();
+const urls = [];
+async function renderThumbs(gid, el) {
+  if (!el) return;
+  let list = [];
+  try { list = await idb.byGame(gid); } catch {}
+  el.innerHTML = '';
+  list.sort((a, b) => a.t - b.t).forEach(p => {
+    const u = URL.createObjectURL(p.blob); urls.push(u);
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', 'Vezi poza');
+    b.innerHTML = `<img alt="" src="${u}">`;
+    b.addEventListener('click', () => openViewer(p, u, () => renderThumbs(gid, el)));
+    el.appendChild(b);
+  });
+  el.hidden = !list.length && el.id !== 'endThumbs';
+}
+let viewing = null;
+function openViewer(p, u, after) {
+  viewing = { p, after, armed: null }; $('#viewImg').src = u; $('#viewDel').textContent = 'Șterge poza'; $('#viewer').hidden = false;
+}
+$('#viewClose').addEventListener('click', () => { $('#viewer').hidden = true; viewing = null; });
+$('#viewDel').addEventListener('click', async e => {
+  if (!viewing) return;
+  if (!viewing.armed) { e.target.textContent = 'Sigur? Atinge din nou'; viewing.armed = setTimeout(() => { if (viewing) { viewing.armed = null; e.target.textContent = 'Șterge poza'; } }, 4000); return; }
+  try { await idb.del(viewing.p.id); } catch {}
+  const after = viewing.after; $('#viewer').hidden = true; viewing = null; after && after();
+});
+
+let photoGame = null;
+function pickPhoto() {
+  if (G && G.running) pause();
+  photoGame = G ? G.id : null;
+  $('#photoIn').value = ''; $('#photoIn').click();
+}
+$('#addPhoto').addEventListener('click', pickPhoto);
+$('#photoIn').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) startScan(f); });
+
+/* ---------------- Scanner: 4 corners + perspective warp ---------------- */
+const SC = { src: null, pts: null, phase: 'corners', out: null, view: null };
+async function startScan(file) {
+  let img;
+  try {
+    img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+  } catch { return; }
+  const max = 2000, k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(img.src);
+  const w = c.width, h = c.height, m = 0.1;
+  SC.src = c; SC.pts = [{ x: w * m, y: h * m }, { x: w * (1 - m), y: h * m }, { x: w * (1 - m), y: h * (1 - m) }, { x: w * m, y: h * (1 - m) }];
+  SC.phase = 'corners'; SC.out = null;
+  $('#scan').hidden = false; scanUI(); requestAnimationFrame(drawScan);
+}
+function scanUI() {
+  const corners = SC.phase === 'corners';
+  $('#scanMsg').textContent = corners ? 'Trage cele 4 cercuri pe colțurile tablei. Rămâne doar tabla, îndreptată.' : 'Așa arată. Rotește dacă e nevoie, apoi salvează.';
+  $('#scanA').textContent = corners ? 'Renunță' : 'Refă';
+  $('#scanB').textContent = corners ? 'Toată poza' : '↻ Rotește';
+  $('#scanC').textContent = corners ? 'Decupează' : 'Salvează';
+  document.querySelectorAll('.hdl').forEach(el => el.hidden = !corners);
+}
+function drawScan() {
+  if ($('#scan').hidden) return;
+  const stage = $('#scanStage'), cv = $('#scanCv'), img = SC.phase === 'corners' ? SC.src : SC.out;
+  const sw = stage.clientWidth, sh = stage.clientHeight, s = Math.min(sw / img.width, sh / img.height);
+  const cw = img.width * s, ch = img.height * s, ox = (sw - cw) / 2, oy = (sh - ch) / 2, dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.style.width = cw + 'px'; cv.style.height = ch + 'px'; cv.style.left = ox + 'px'; cv.style.top = oy + 'px';
+  cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
+  const g = cv.getContext('2d'); g.setTransform(dpr * s, 0, 0, dpr * s, 0, 0); g.drawImage(img, 0, 0);
+  SC.view = { s, ox, oy };
+  if (SC.phase !== 'corners') return;
+  const P = SC.pts;
+  g.beginPath(); g.rect(0, 0, img.width, img.height); g.moveTo(P[0].x, P[0].y); for (let i = 3; i >= 0; i--) g.lineTo(P[i].x, P[i].y); g.closePath();
+  g.fillStyle = 'rgba(0,0,0,.5)'; g.fill('evenodd');
+  g.beginPath(); P.forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.closePath();
+  g.lineWidth = 3 / s; g.strokeStyle = '#ffd54a'; g.stroke();
+  document.querySelectorAll('.hdl').forEach(el => { const p = P[+el.dataset.i]; el.style.left = (ox + p.x * s) + 'px'; el.style.top = (oy + p.y * s) + 'px'; });
+}
+document.querySelectorAll('.hdl').forEach(el => {
+  el.addEventListener('pointerdown', e => { e.preventDefault(); el.setPointerCapture(e.pointerId); el.dataset.drag = '1'; });
+  el.addEventListener('pointermove', e => {
+    if (!el.dataset.drag) return;
+    const r = $('#scanStage').getBoundingClientRect(), v = SC.view, p = SC.pts[+el.dataset.i];
+    p.x = Math.max(0, Math.min(SC.src.width, (e.clientX - r.left - v.ox) / v.s));
+    p.y = Math.max(0, Math.min(SC.src.height, (e.clientY - r.top - v.oy) / v.s));
+    drawScan();
+  });
+  const end = () => { delete el.dataset.drag; };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+});
+window.addEventListener('resize', () => { if (!$('#scan').hidden) drawScan(); });
+function homography(dst, src) {           // maps dst (x,y) -> src (u,v)
+  const A = [], b = [];
+  for (let i = 0; i < 4; i++) {
+    const { x, y } = dst[i], { x: u, y: v } = src[i];
+    A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); b.push(u);
+    A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); b.push(v);
+  }
+  for (let c = 0; c < 8; c++) {
+    let piv = c; for (let r = c + 1; r < 8; r++) if (Math.abs(A[r][c]) > Math.abs(A[piv][c])) piv = r;
+    [A[c], A[piv]] = [A[piv], A[c]]; [b[c], b[piv]] = [b[piv], b[c]];
+    for (let r = 0; r < 8; r++) if (r !== c) { const f = A[r][c] / A[c][c]; for (let k = c; k < 8; k++) A[r][k] -= f * A[c][k]; b[r] -= f * b[c]; }
+  }
+  return b.map((v, i) => v / A[i][i]);
+}
+function warp() {
+  const N = 1200, src = SC.src, sw = src.width, sh = src.height;
+  const H = homography([{ x: 0, y: 0 }, { x: N, y: 0 }, { x: N, y: N }, { x: 0, y: N }], SC.pts);
+  const sd = src.getContext('2d').getImageData(0, 0, sw, sh).data;
+  const out = document.createElement('canvas'); out.width = N; out.height = N;
+  const og = out.getContext('2d'), od = og.createImageData(N, N), d = od.data;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const z = H[6] * x + H[7] * y + 1, u = (H[0] * x + H[1] * y + H[2]) / z, v = (H[3] * x + H[4] * y + H[5]) / z;
+    const x0 = Math.max(0, Math.min(sw - 2, u | 0)), y0 = Math.max(0, Math.min(sh - 2, v | 0)), fx = Math.min(1, Math.max(0, u - x0)), fy = Math.min(1, Math.max(0, v - y0));
+    const i00 = (y0 * sw + x0) * 4, i10 = i00 + 4, i01 = i00 + sw * 4, i11 = i01 + 4, o = (y * N + x) * 4;
+    for (let k = 0; k < 3; k++) d[o + k] = (sd[i00 + k] * (1 - fx) + sd[i10 + k] * fx) * (1 - fy) + (sd[i01 + k] * (1 - fx) + sd[i11 + k] * fx) * fy;
+    d[o + 3] = 255;
+  }
+  og.putImageData(od, 0, 0); return out;
+}
+function rotate90(c) {
+  const o = document.createElement('canvas'); o.width = c.height; o.height = c.width;
+  const g = o.getContext('2d'); g.translate(o.width, 0); g.rotate(Math.PI / 2); g.drawImage(c, 0, 0); return o;
+}
+function scaled(c, max) {
+  const k = Math.min(1, max / Math.max(c.width, c.height)); if (k === 1) return c;
+  const o = document.createElement('canvas'); o.width = Math.round(c.width * k); o.height = Math.round(c.height * k);
+  o.getContext('2d').drawImage(c, 0, 0, o.width, o.height); return o;
+}
+function closeScan() { $('#scan').hidden = true; SC.src = SC.out = null; }
+$('#scanA').addEventListener('click', () => { if (SC.phase === 'corners') closeScan(); else { SC.phase = 'corners'; scanUI(); drawScan(); } });
+$('#scanB').addEventListener('click', () => {
+  if (SC.phase === 'corners') { SC.out = scaled(SC.src, 1600); SC.phase = 'preview'; }
+  else SC.out = rotate90(SC.out);
+  scanUI(); drawScan();
+});
+$('#scanC').addEventListener('click', async () => {
+  if (SC.phase === 'corners') { $('#scanMsg').textContent = 'Se îndreaptă tabla…'; await new Promise(r => setTimeout(r, 30)); SC.out = warp(); SC.phase = 'preview'; scanUI(); drawScan(); return; }
+  const blob = await new Promise(r => SC.out.toBlob(r, 'image/jpeg', 0.85));
+  const gid = photoGame || (G && G.id);
+  if (blob && gid) {
+    try { await idb.put({ id: gid + '-' + Date.now(), gameId: gid, t: Date.now(), blob }); }
+    catch { alertMsg('Poza nu s-a putut salva pe acest telefon.'); }
+  }
+  closeScan();
+  if (!$('#endSheet').hidden && G) renderThumbs(G.id, $('#endThumbs'));
+});
+function alertMsg(t) { $('#scanMsg').textContent = t; }
 $('#backGame').addEventListener('click', () => { $('#endSheet').hidden = true; });
 function leaveGame() {
   $('#endSheet').hidden = true; G = null; store.del('scr-game'); keepAwake(false);
   $('#game').hidden = true; $('#setup').hidden = false; renderSetup(); window.scrollTo(0, 0);
 }
 $('#newGame').addEventListener('click', () => { saveRecord(); leaveGame(); });
-$('#discardGame').addEventListener('click', leaveGame);
+$('#discardGame').addEventListener('click', () => { if (G) idb.delGame(G.id).catch(() => {}); leaveGame(); });
 
 /* ---------------- Clasament ---------------- */
 const keyOf = n => n.trim().toLocaleLowerCase('ro');
@@ -508,10 +740,11 @@ function saveRecord() {
   const players = G.score.map((s, i) => {
     const mv = G.moves.filter(m => m.p === i);
     return { name: nameOf(i), score: s, final: f.list[i], ms: G.used[i], turns: G.turns[i],
-             best: mv.reduce((a, m) => Math.max(a, m.pts), 0), bingos: mv.filter(m => m.b).length, win: f.list[i] === best };
+             best: mv.reduce((a, m) => Math.max(a, m.pts), 0), bingos: mv.filter(m => m.b).length, win: f.list[i] === best,
+             moves: mv.filter(m => m.pts > 0).map(m => ({ pts: m.pts, w: m.w || '', t: m.t || [], b: !!m.b })) };
   });
   const hist = store.get('scr-history') || [];
-  hist.push({ date: G.date || Date.now(), players });
+  hist.push({ id: G.id, date: G.date || Date.now(), players });
   store.set('scr-history', hist.slice(-500));
 }
 const dfmt = t => new Date(t).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: '2-digit' });
@@ -522,9 +755,11 @@ function renderStats() {
     body.innerHTML = `<div class="empty-state">Încă nu e niciun joc salvat. La sfârșitul unui joc apasă <b>Final</b>, apoi <b>Salvează în clasament</b>. Aici apar victoriile, cel mai valoros cuvânt, scrabble-urile și punctele pe minut ale fiecăruia.<br><br>Scrieți numele la fel de fiecare dată, ca să se adune la aceeași persoană.</div>`;
     return;
   }
-  const P = {}, R = { word: null, game: null, bingo: null, ppm: null };
+  const P = {}, R = { word: null, game: null, bingo: null, ppm: null }, W = [];
   const better = (cur, v) => !cur || v > cur.v;
   for (const g of hist) for (const p of g.players) {
+    if (p.moves) p.moves.forEach(m => W.push({ ...m, who: p.name, d: g.date }));
+    else if (p.best) W.push({ pts: p.best, w: '', t: [], b: false, who: p.name, d: g.date });
     const k = keyOf(p.name), o = P[k] || (P[k] = { name: p.name, games: 0, wins: 0, sumFinal: 0, top: 0, best: 0, bingos: 0, score: 0, ms: 0 });
     o.name = p.name; o.games++; o.wins += p.win ? 1 : 0; o.sumFinal += p.final; o.top = Math.max(o.top, p.final);
     o.best = Math.max(o.best, p.best); o.bingos += p.bingos; o.score += p.score; o.ms += p.ms;
@@ -536,8 +771,11 @@ function renderStats() {
   }
   const list = Object.values(P).sort((a, b) => b.wins - a.wins || (b.wins / b.games) - (a.wins / a.games) || b.sumFinal / b.games - a.sumFinal / a.games);
   const recCard = (r, label, fmtv) => `<div><span>${label}</span><b>${r ? fmtv(r.v) : '–'}</b><i>${r ? esc(r.who) : '&nbsp;'}</i><span>${r ? dfmt(r.d) : 'încă nimeni'}</span></div>`;
+  W.sort((a, b) => b.pts - a.pts || a.d - b.d);
+  const top = W[0];
+  const wordCard = top ? `<div style="grid-column:1/-1"><span>Cel mai valoros cuvânt</span><b>${top.w ? esc(top.w) + ' · ' : ''}${top.pts} pct</b><i>${esc(top.who)}</i><span>${howText(top.t, top.b) ? esc(howText(top.t, top.b)) + ' · ' : ''}${dfmt(top.d)}</span></div>` : recCard(null, 'Cel mai valoros cuvânt', v => v);
   let h = `<h2>Recorduri</h2><div class="rec">
-    ${recCard(R.word, 'Cel mai valoros cuvânt', v => v + ' pct')}
+    ${wordCard}
     ${recCard(R.game, 'Cel mai mare scor într-un joc', v => v + ' pct')}
     ${recCard(R.bingo, 'Cele mai multe scrabble-uri într-un joc', v => v)}
     ${recCard(R.ppm, 'Cel mai rapid (puncte pe minut)', v => num(v, 1))}
@@ -555,14 +793,17 @@ function renderStats() {
         <div><b>${ppm}</b><span>puncte pe minut</span></div>
       </div></div>`;
   });
+  if (W.length) h += `<h2>Cele mai bune cuvinte</h2><div class="words">` + W.slice(0, 10).map((m, i) =>
+    `<div><span class="pts">${m.pts}</span><span class="w">${m.w ? esc(m.w) : '<span style="color:var(--muted);font-weight:500;letter-spacing:0">cuvânt nescris</span>'}</span><span style="font-size:14px">${esc(m.who)}</span><span class="how">${esc([howText(m.t, m.b), dfmt(m.d)].filter(Boolean).join(' · '))}</span></div>`).join('') + `</div>`;
   h += `<h2>Ultimele jocuri</h2><div class="games">` + hist.slice(-10).reverse().map(g =>
-    `<div><time>${dfmt(g.date)}</time><span>${g.players.slice().sort((a, b) => b.final - a.final).map(p => p.win ? `<b>${esc(p.name)} ${p.final}</b>` : `${esc(p.name)} ${p.final}`).join(' · ')}</span></div>`).join('') + `</div>
+    `<div style="flex-wrap:wrap"><time>${dfmt(g.date)}</time><span style="flex:1">${g.players.slice().sort((a, b) => b.final - a.final).map(p => p.win ? `<b>${esc(p.name)} ${p.final}</b>` : `${esc(p.name)} ${p.final}`).join(' · ')}</span>${g.id ? `<div class="thumbs" data-gid="${esc(g.id)}" hidden style="flex-basis:100%;border:0;padding:4px 0 0"></div>` : ''}</div>`).join('') + `</div>
     <button type="button" class="linkish" id="clearStats" style="justify-self:start">Șterge tot clasamentul</button>`;
   body.innerHTML = h;
+  body.querySelectorAll('.thumbs[data-gid]').forEach(el => renderThumbs(el.dataset.gid, el));
   let armed = null;
   $('#clearStats').addEventListener('click', e => {
     if (!armed) { e.target.textContent = 'Sigur? Atinge din nou ca să ștergi'; armed = setTimeout(() => { armed = null; e.target.textContent = 'Șterge tot clasamentul'; }, 4000); return; }
-    clearTimeout(armed); store.del('scr-history'); renderStats();
+    clearTimeout(armed); store.del('scr-history'); idb.clear().catch(() => {}); renderStats();
   });
 }
 $('#statsBtn').addEventListener('click', () => { renderStats(); $('#setup').hidden = true; $('#stats').hidden = false; window.scrollTo(0, 0); });
@@ -593,7 +834,8 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') persist();
 });
 document.addEventListener('keydown', e => {
-  if (!G || $('#game').hidden || !$('#endSheet').hidden) return;
+  if (!G || $('#game').hidden || !$('#endSheet').hidden || !$('#scan').hidden || !$('#viewer').hidden) return;
+  if (e.target && e.target.tagName === 'INPUT') return;
   if (!$('#pad').hidden) {
     if (/^\d$/.test(e.key)) padKey(e.key);
     else if (e.key === 'Backspace') padKey('del');
