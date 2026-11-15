@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}*,*::before,*::after{box-sizing:border-box}</style>
+</head>
+<body>
+<title>Ceas de Scrabble</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#16241e">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: setup = one narrow column of form groups; game = full-screen stack of player cards, the active one tinted in its premium-square color, control bar between/below */
+:root {
+  --bg: #e6ece7; --surface: #f8faf7; --ink: #1b2822; --muted: #5d6e65; --line: #cad6ce;
+  --tile: #ecdcb8; --tile-edge: #cdb98d; --tile-ink: #2a2116;
+  --p1: #3a9a58; --p1-ink: #ffffff;
+  --p2: #c9443a; --p2-ink: #ffffff;
+  --p3: #2f6fc0; --p3-ink: #ffffff;
+  --p4: #f2c230; --p4-ink: #2e2300;
+  --idle: #dfe6e0; --warn: #c86f06; --danger: #b3261e;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --f-num: "Roboto Mono", ui-monospace, "Consolas", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1814; --surface: #16231e; --ink: #e5eee8; --muted: #92a69b; --line: #283a32;
+  --tile: #d8c497; --tile-edge: #a8925f; --tile-ink: #241c12;
+  --p1: #3c9d5b; --p1-ink: #fff; --p2: #c4473d; --p2-ink: #fff;
+  --p3: #3d7ccf; --p3-ink: #fff; --p4: #e8b923; --p4-ink: #2a1f00;
+  --idle: #1c2b25; --warn: #f0a443; --danger: #ff7a6e; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0e1814; --surface: #16231e; --ink: #e5eee8; --muted: #92a69b; --line: #283a32;
+  --tile: #d8c497; --tile-edge: #a8925f; --tile-ink: #241c12;
+  --p1: #3c9d5b; --p1-ink: #fff; --p2: #c4473d; --p2-ink: #fff;
+  --p3: #3d7ccf; --p3-ink: #fff; --p4: #e8b923; --p4-ink: #2a1f00;
+  --idle: #1c2b25; --warn: #f0a443; --danger: #ff7a6e; color-scheme: dark }
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; -webkit-tap-highlight-color: transparent; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--p3); outline-offset: 2px; }
+
+/* ---------- Setup ---------- */
+#setup { max-width: 30rem; margin: 0 auto; padding-block: 24px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 22px; }
+.tiles { display: flex; gap: 6px; flex-wrap: wrap; }
+.tile { position: relative; width: 46px; height: 46px; border-radius: 6px; background: var(--tile); color: var(--tile-ink); box-shadow: inset 0 -3px 0 var(--tile-edge); display: grid; place-items: center; font-family: var(--f-display); font-weight: 800; font-size: 26px; }
+.tile sub { position: absolute; right: 5px; bottom: 5px; font-size: 10px; font-family: var(--f-body); font-weight: 600; }
+.tile.gap { background: transparent; box-shadow: none; width: 10px; }
+.lead { color: var(--muted); margin: 8px 0 0; line-height: 1.45; }
+fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 10px; }
+legend { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 0; margin-bottom: 10px; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--idle); border-radius: 10px; padding: 4px; gap: 4px; }
+.seg button { border: 0; background: transparent; border-radius: 7px; padding: 10px 6px; font-weight: 600; min-height: 44px; }
+.seg button[aria-pressed="true"] { background: var(--surface); box-shadow: 0 1px 3px rgb(0 0 0 / .15); }
+.name-row { display: flex; align-items: center; gap: 10px; }
+.dot { width: 22px; height: 22px; border-radius: 5px; flex: none; }
+.name-row input { flex: 1; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper button { width: 52px; height: 52px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 24px; font-weight: 600; }
+.stepper output { flex: 1; text-align: center; font-family: var(--f-num); font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hint { font-size: 13px; color: var(--muted); margin: 0; line-height: 1.4; }
+.check { display: flex; gap: 12px; align-items: flex-start; padding: 6px 0; }
+.check input { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--p3); flex: none; }
+.check span { line-height: 1.35; }
+.check small { display: block; color: var(--muted); font-size: 13px; }
+.primary { border: 0; border-radius: 12px; padding: 16px; background: var(--ink); color: var(--bg); font-weight: 700; font-size: 18px; min-height: 56px; }
+.secondary { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--surface); font-weight: 600; min-height: 52px; }
+.actions { display: grid; gap: 10px; }
+
+/* ---------- Game ---------- */
+#game { position: fixed; inset: 0; display: flex; flex-direction: column; gap: 6px;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) max(6px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px)); background: var(--bg); }
+.card { flex: 1 1 0; min-height: 0; border: 0; border-radius: 16px; background: var(--idle); color: var(--muted);
+  display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px; padding: 8px; text-align: center; transition: background-color .2s, color .2s; position: relative; overflow: hidden; }
+.card.flip { transform: rotate(180deg); }
+.card .who { font-family: var(--f-display); font-weight: 800; font-size: clamp(18px, 3.4vh, 30px); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+.card .who .dot { width: .8em; height: .8em; border-radius: 3px; }
+.card .time { font-family: var(--f-num); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; font-size: var(--tsize, 15vh); letter-spacing: -.02em; }
+.card .meta { font-size: clamp(13px, 2vh, 16px); display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+.chip { font-weight: 700; padding: 3px 9px; border-radius: 99px; font-size: .9em; }
+.card .chip.pen { background: var(--danger); color: #fff; }
+.card.active { background: var(--pc); color: var(--pci); }
+.card.active .dot { outline: 2px solid currentColor; }
+.card.over .time { color: var(--danger); }
+.card.active.over .time { color: inherit; animation: blink 1s steps(2) infinite; }
+.card.idle-paused.active { opacity: .82; }
+.card .tap { font-size: 13px; font-weight: 600; opacity: .85; }
+@keyframes blink { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .card.active.over .time { animation: none; text-decoration: underline; } .card { transition: none; } }
+.bar { flex: none; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.bar button { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; min-height: 52px; font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.bar button:disabled { opacity: .4; }
+.bar .go { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* ---------- Sheet ---------- */
+.sheet { position: fixed; inset: 0; background: rgb(0 0 0 / .45); display: grid; align-items: end; justify-items: center; z-index: 20; }
+.sheet > div { background: var(--surface); width: 100%; max-width: 30rem; border-radius: 18px 18px 0 0; padding-block: 22px calc(22px + env(safe-area-inset-bottom, 0px)); padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px)); display: grid; gap: 14px; max-height: 90%; overflow: auto; }
+.sheet h2 { font-family: var(--f-display); margin: 0; font-size: 24px; text-wrap: balance; }
+.sum { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.sum th, .sum td { padding: 9px 4px; border-bottom: 1px solid var(--line); text-align: right; font-size: 14px; }
+.sum th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+.sum td:first-child, .sum th:first-child { text-align: left; }
+.sum td.n { font-family: var(--f-num); }
+.sum .pen { color: var(--danger); font-weight: 700; }
+.table-wrap { overflow-x: auto; }
+</style>
+
+<main id="setup">
+  <header>
+    <div class="tiles" aria-hidden="true">
+      <span class="tile">C<sub>1</sub></span><span class="tile">E<sub>1</sub></span><span class="tile">A<sub>1</sub></span><span class="tile">S<sub>1</sub></span>
+    </div>
+    <h1 style="font-family:var(--f-display);font-size:30px;margin:14px 0 0;text-wrap:balance">Ceas de Scrabble</h1>
+    <p class="lead">Pune telefonul pe masă. Cine termină tura atinge ecranul și ceasul trece la următorul jucător.</p>
+  </header>
+
+  <fieldset>
+    <legend>Câți jucători</legend>
+    <div class="seg" id="count">
+      <button type="button" data-n="2">2</button><button type="button" data-n="3">3</button><button type="button" data-n="4">4</button>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Nume, în ordinea în care jucați</legend>
+    <div id="names" style="display:grid;gap:8px"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Cum se măsoară timpul</legend>
+    <div class="seg" id="mode">
+      <button type="button" data-m="total">Timp total</button><button type="button" data-m="turn">Timp pe tură</button>
+    </div>
+    <p class="hint" id="modeHint"></p>
+    <div class="stepper">
+      <button type="button" id="minus" aria-label="Mai puțin timp">−</button>
+      <output id="dur">25:00</output>
+      <button type="button" id="plus" aria-label="Mai mult timp">+</button>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Opțiuni</legend>
+    <label class="check" id="penRow"><input type="checkbox" id="optPen"><span>Penalizare la depășire<small>10 puncte pentru fiecare minut început peste timp, ca la concursuri.</small></span></label>
+    <label class="check" id="flipRow"><input type="checkbox" id="optFlip"><span>Ecran față în față<small>Pentru 2 jucători: jumătatea de sus e întoarsă spre cel din fața ta.</small></span></label>
+    <label class="check"><input type="checkbox" id="optSound"><span>Sunet când expiră timpul</span></label>
+  </fieldset>
+
+  <div class="actions">
+    <button type="button" class="secondary" id="resume" hidden>Continuă jocul întrerupt</button>
+    <button type="button" class="primary" id="start">Începe jocul</button>
+  </div>
+</main>
+
+<section id="game" hidden>
+  <div id="cards" style="display:contents"></div>
+</section>
+
+<div class="sheet" id="endSheet" hidden><div>
+  <h2>Rezumatul jocului</h2>
+  <div class="table-wrap"><table class="sum" id="sumTable"></table></div>
+  <p class="hint" id="sumHint"></p>
+  <div class="actions">
+    <button type="button" class="secondary" id="backGame">Înapoi la joc</button>
+    <button type="button" class="primary" id="newGame">Joc nou</button>
+  </div>
+</div></div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} }
+};
+const DEF = { n: 2, names: ['', '', '', ''], mode: 'total', totalMin: 25, turnSec: 120, pen: true, flip: true, sound: true };
+let S = Object.assign({}, DEF, store.get('scr-settings') || {});
+let G = null;           // current game
+let last = 0, timer = null, wake = null, audio = null;
+
+const pname = i => (S.names[i] || '').trim() || 'Jucător ' + (i + 1);
+const pad = n => String(n).padStart(2, '0');
+function fmt(ms) {
+  if (ms >= 0) { const s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ':' + pad(s % 60); }
+  const s = Math.floor(-ms / 1000); return '−' + Math.floor(s / 60) + ':' + pad(s % 60);
+}
+const fmtUsed = ms => { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ':' + pad(s % 60); };
+
+/* ---------------- Setup ---------------- */
+function renderSetup() {
+  document.querySelectorAll('#count button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.n === S.n));
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-pressed', b.dataset.m === S.mode));
+  const box = $('#names');
+  if (box.children.length !== S.n) {
+    box.innerHTML = '';
+    for (let i = 0; i < S.n; i++) {
+      const row = document.createElement('div'); row.className = 'name-row';
+      row.innerHTML = `<span class="dot" style="background:var(--p${i + 1})"></span><input id="name${i}" maxlength="16" autocomplete="off" placeholder="Jucător ${i + 1}">`;
+      const inp = row.querySelector('input'); inp.value = S.names[i] || '';
+      inp.addEventListener('input', () => { S.names[i] = inp.value; save(); });
+      box.appendChild(row);
+    }
+  }
+  $('#dur').textContent = S.mode === 'total' ? S.totalMin + ':00' : fmt(S.turnSec * 1000);
+  $('#modeHint').textContent = S.mode === 'total'
+    ? 'Fiecare are un timp total pentru tot jocul, ca la un ceas de șah. Minute pe jucător:'
+    : 'Fiecare tură are același timp; ceasul pornește de la capăt la fiecare tură. Timp pe tură:';
+  $('#penRow').hidden = S.mode !== 'total';
+  $('#flipRow').hidden = S.n !== 2;
+  $('#optPen').checked = S.pen; $('#optFlip').checked = S.flip; $('#optSound').checked = S.sound;
+  $('#resume').hidden = !store.get('scr-game');
+}
+function save() { store.set('scr-settings', S); }
+function step(dir) {
+  if (S.mode === 'total') S.totalMin = Math.min(90, Math.max(1, S.totalMin + dir * (S.totalMin < 10 || (S.totalMin === 10 && dir < 0) ? 1 : 5)));
+  else S.turnSec = Math.min(600, Math.max(15, S.turnSec + dir * (S.turnSec < 60 || (S.turnSec === 60 && dir < 0) ? 5 : 15)));
+  save(); renderSetup();
+}
+$('#count').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { S.n = +b.dataset.n; save(); renderSetup(); } });
+$('#mode').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { S.mode = b.dataset.m; save(); renderSetup(); } });
+$('#minus').addEventListener('click', () => step(-1));
+$('#plus').addEventListener('click', () => step(1));
+['Pen', 'Flip', 'Sound'].forEach(k => $('#opt' + k).addEventListener('change', e => { S[k.toLowerCase()] = e.target.checked; save(); }));
+$('#start').addEventListener('click', () => { unlockAudio(); newGame(); });
+$('#resume').addEventListener('click', () => { unlockAudio(); const g = store.get('scr-game'); if (g) { G = g; G.running = false; S = Object.assign({}, S, G.cfg); showGame(); } });
+
+/* ---------------- Game ---------------- */
+function newGame() {
+  G = { cfg: { n: S.n, names: S.names.slice(), mode: S.mode, totalMin: S.totalMin, turnSec: S.turnSec, pen: S.pen, flip: S.flip, sound: S.sound },
+        used: Array(S.n).fill(0), turns: Array(S.n).fill(0), turnUsed: 0, active: 0, running: false, started: false,
+        beeped: Array(S.n).fill(false), warned: false, hist: [] };
+  showGame();
+}
+function showGame() {
+  $('#setup').hidden = true; $('#game').hidden = false;
+  buildCards(); render();
+}
+function buildCards() {
+  const c = G.cfg, wrap = $('#cards'); wrap.innerHTML = '';
+  const tsize = c.n === 2 ? 'min(24vw, 15vh)' : c.n === 3 ? 'min(20vw, 10vh)' : 'min(18vw, 7.5vh)';
+  const makeCard = i => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'card'; b.id = 'card' + i;
+    b.style.setProperty('--pc', `var(--p${i + 1})`); b.style.setProperty('--pci', `var(--p${i + 1}-ink)`); b.style.setProperty('--tsize', tsize);
+    if (c.n === 2 && c.flip && i === 0) b.classList.add('flip');
+    b.innerHTML = `<span class="who"><span class="dot" style="background:var(--p${i + 1})"></span><span class="nm"></span></span><span class="time"></span><span class="meta"></span><span class="tap"></span>`;
+    b.querySelector('.nm').textContent = (c.names[i] || '').trim() || 'Jucător ' + (i + 1);
+    b.addEventListener('click', () => tapCard(i));
+    return b;
+  };
+  const bar = document.createElement('div'); bar.className = 'bar';
+  bar.innerHTML = `<button type="button" id="bPause" class="go"></button><button type="button" id="bUndo">↶ Anulează</button><button type="button" id="bEnd">Final</button>`;
+  bar.querySelector('#bPause').addEventListener('click', togglePause);
+  bar.querySelector('#bUndo').addEventListener('click', undo);
+  bar.querySelector('#bEnd').addEventListener('click', openEnd);
+  if (c.n === 2) { wrap.append(makeCard(0), bar, makeCard(1)); }
+  else { for (let i = 0; i < c.n; i++) wrap.append(makeCard(i)); wrap.append(bar); }
+}
+function remaining(i) {
+  const c = G.cfg;
+  if (c.mode === 'total') return c.totalMin * 60000 - G.used[i];
+  return i === G.active ? c.turnSec * 1000 - G.turnUsed : c.turnSec * 1000;
+}
+function penalty(i) {
+  const c = G.cfg; if (c.mode !== 'total' || !c.pen) return 0;
+  const over = G.used[i] - c.totalMin * 60000; return over > 0 ? Math.ceil(over / 60000) * 10 : 0;
+}
+function render() {
+  if (!G) return;
+  const c = G.cfg;
+  for (let i = 0; i < c.n; i++) {
+    const el = document.getElementById('card' + i); if (!el) continue;
+    const rem = remaining(i), act = i === G.active;
+    el.classList.toggle('active', act);
+    el.classList.toggle('over', rem < 0);
+    el.classList.toggle('idle-paused', !G.running);
+    el.querySelector('.time').textContent = fmt(rem);
+    const pen = penalty(i);
+    let meta = `Ture: ${G.turns[i]}`;
+    if (c.mode === 'turn') meta += ` · total ${fmtUsed(G.used[i])}`;
+    el.querySelector('.meta').innerHTML = meta.replace(/&/g, '&amp;') + (pen ? ` <span class="chip pen">−${pen} pct</span>` : '');
+    el.querySelector('.tap').textContent = act ? (G.running ? 'Atinge când termini tura' : (G.started ? 'Pauză · atinge pentru a continua' : 'Atinge pentru a începe')) : '';
+    el.setAttribute('aria-label', `${el.querySelector('.nm').textContent}, ${fmt(rem)}${act ? ', la rând' : ''}`);
+  }
+  const bp = $('#bPause');
+  bp.textContent = G.running ? '❚❚ Pauză' : (G.started ? '▶ Continuă' : '▶ Start');
+  $('#bUndo').disabled = G.hist.length === 0;
+}
+function tapCard(i) {
+  unlockAudio();
+  if (!G.running) {
+    if (i !== G.active && !G.started) { G.active = i; }   // choose who starts
+    else if (i !== G.active) { return render(); }
+    start(); return;
+  }
+  if (i === G.active) nextTurn();
+}
+function start() { G.running = true; G.started = true; last = Date.now(); loop(); keepAwake(true); persist(); render(); }
+function pause() { tick(); G.running = false; keepAwake(false); persist(); render(); }
+function togglePause() { unlockAudio(); G.running ? pause() : start(); }
+function nextTurn() {
+  tick();
+  G.hist.push({ from: G.active, turnUsed: G.turnUsed, warned: G.warned });
+  if (G.hist.length > 50) G.hist.shift();
+  G.turns[G.active]++;
+  G.active = (G.active + 1) % G.cfg.n;
+  G.turnUsed = 0; G.warned = false;
+  if (G.cfg.mode === 'turn') G.beeped[G.active] = false;
+  try { navigator.vibrate && navigator.vibrate(30); } catch {}
+  persist(); render();
+}
+function undo() {
+  const h = G.hist.pop(); if (!h) return;
+  tick();
+  // the time since the mistaken tap belongs to the previous player
+  G.used[G.active] -= G.turnUsed; G.used[h.from] += G.turnUsed;
+  G.turnUsed = h.turnUsed + G.turnUsed; G.active = h.from; G.turns[h.from]--; G.warned = h.warned;
+  persist(); render();
+}
+function tick() {
+  if (!G || !G.running) return;
+  const now = Date.now(), d = Math.max(0, now - last); last = now;
+  G.used[G.active] += d; G.turnUsed += d;
+  const rem = remaining(G.active);
+  if (G.cfg.mode === 'turn' && !G.warned && rem <= 10000 && rem > 0 && G.cfg.turnSec > 20) { G.warned = true; beep(660, .12); }
+  if (rem <= 0 && !G.beeped[G.active]) { G.beeped[G.active] = true; beep(880, .25); setTimeout(() => beep(880, .25), 320); setTimeout(() => beep(1175, .5), 640); }
+}
+function loop() {
+  clearInterval(timer);
+  timer = setInterval(() => { if (!G || !G.running) { clearInterval(timer); return; } tick(); render(); }, 200);
+}
+let lastSave = 0;
+function persist() { if (!G) return; lastSave = Date.now(); store.set('scr-game', G); }
+setInterval(() => { if (G && G.running && Date.now() - lastSave > 3000) persist(); }, 1000);
+
+/* ---------------- End ---------------- */
+function openEnd() {
+  if (G.running) pause();
+  const c = G.cfg;
+  let h = `<tr><th>Jucător</th><th>Timp folosit</th><th>Ture</th><th>Medie / tură</th>${c.mode === 'total' && c.pen ? '<th>Penalizare</th>' : ''}</tr>`;
+  for (let i = 0; i < c.n; i++) {
+    const t = G.turns[i] + (i === G.active && G.turnUsed > 0 ? 1 : 0);
+    const avg = t ? fmtUsed(G.used[i] / t) : '–';
+    const nm = ((c.names[i] || '').trim() || 'Jucător ' + (i + 1)).replace(/[<&]/g, m => m === '<' ? '&lt;' : '&amp;');
+    h += `<tr><td><span class="dot" style="display:inline-block;width:10px;height:10px;margin-right:6px;background:var(--p${i + 1})"></span>${nm}</td><td class="n">${fmtUsed(G.used[i])}</td><td class="n">${t}</td><td class="n">${avg}</td>${c.mode === 'total' && c.pen ? `<td class="n ${penalty(i) ? 'pen' : ''}">${penalty(i) ? '−' + penalty(i) : '0'}</td>` : ''}</tr>`;
+  }
+  $('#sumTable').innerHTML = h;
+  $('#sumHint').textContent = c.mode === 'total' && c.pen ? 'Penalizările se scad din scorul final al fiecărui jucător.' : 'Ceasul e pe pauză.';
+  $('#endSheet').hidden = false;
+}
+$('#backGame').addEventListener('click', () => { $('#endSheet').hidden = true; });
+$('#newGame').addEventListener('click', () => {
+  $('#endSheet').hidden = true; G = null; store.del('scr-game'); keepAwake(false);
+  $('#game').hidden = true; $('#setup').hidden = false; renderSetup(); window.scrollTo(0, 0);
+});
+
+/* ---------------- Sound, wake lock, keys ---------------- */
+function unlockAudio() {
+  try { if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch {}
+}
+function beep(freq, dur) {
+  if (!G || !G.cfg.sound || !audio) return;
+  try {
+    const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime;
+    o.type = 'triangle'; o.frequency.value = freq; o.connect(g); g.connect(audio.destination);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.start(t); o.stop(t + dur + 0.05);
+  } catch {}
+  try { navigator.vibrate && navigator.vibrate(200); } catch {}
+}
+async function keepAwake(on) {
+  try {
+    if (on && 'wakeLock' in navigator && !wake) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); }
+    if (!on && wake) { await wake.release(); wake = null; }
+  } catch { wake = null; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && G && G.running) { tick(); render(); keepAwake(true); }
+  if (document.visibilityState === 'hidden') persist();
+});
+document.addEventListener('keydown', e => {
+  if (!G || $('#game').hidden || !$('#endSheet').hidden) return;
+  if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); G.running ? nextTurn() : start(); }
+  if (e.key === 'p') togglePause();
+});
+
+/* ---------------- Live update hook ---------------- */
+window.claude?.hot?.snapshot?.(() => ({ S, G: G ? (tick(), G) : null }));
+function boot(data) {
+  if (data && data.S) S = Object.assign({}, DEF, data.S);
+  renderSetup();
+  if (data && data.G) { G = data.G; G.running = false; showGame(); }
+}
+window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+})();
+</script>
+
+</body>
+</html>
